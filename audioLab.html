@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>AudioLab — Digitalizador de Audio</title>
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">
+    <div class="logo-icon">🎛️</div>
+    <div class="logo-text">Audio<span>Lab</span></div>
+    <div class="header-tag">DSP Studio</div>
+  </div>
+  <div class="status-pill">
+    <div class="dot" id="micDot"></div>
+    <span id="micStatus">Micrófono no activo</span>
+  </div>
+</header>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">⚡ Procesamiento digital de señal en tiempo real</div>
+  <h1>Digitalizador de Audio</h1>
+  <p>Grabá, convertí y analizá audio en el navegador. Control total sobre muestreo, cuantización y espectro de frecuencias.</p>
+</div>
+
+<main>
+
+  <!-- ROW 1: Grabación + Parámetros -->
+  <div class="grid-2 section">
+
+    <!-- PASO 1: GRABAR -->
+    <div>
+      <div class="step-label">
+        <div class="step-num">1</div>
+        <div class="step-title">Grabación de Audio</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Micrófono en vivo</div>
+        <div class="card-sub">Capturá audio directamente desde tu micrófono con visualización en tiempo real de la forma de onda.</div>
+        <div class="record-center">
+          <button class="record-btn" id="recordBtn" onclick="toggleRecord()" title="Iniciar / Detener grabación">
+            <div class="record-ring"></div>
+            <span id="recordIcon">🎙️</span>
+          </button>
+          <div>
+            <div class="record-timer" id="recordTimer">00:00</div>
+            <div class="record-status" id="recordStatusTxt">Presioná para grabar</div>
+          </div>
+        </div>
+        <div class="viz-wrap" style="margin-top:20px;">
+          <canvas class="wave-canvas" id="waveCanvas"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- PASO 2: PARÁMETROS -->
+    <div>
+      <div class="step-label">
+        <div class="step-num">2</div>
+        <div class="step-title">Parámetros de Digitalización</div>
+      </div>
+      <div class="card">
+        <div class="card-title">Configuración DSP</div>
+        <div class="card-sub">Ajustá la tasa de muestreo y la profundidad de bits para controlar la calidad del audio digitalizado.</div>
+
+        <div class="ctrl-row">
+          <label style="display:flex;align-items:center;justify-content:space-between;">
+            Tasa de Muestreo
+            <span class="value-badge" id="srBadge">44.1 kHz</span>
+          </label>
+          <div class="chip-row" id="srChips">
+            <div class="chip" onclick="setSR(8000,this)">8 kHz</div>
+            <div class="chip" onclick="setSR(16000,this)">16 kHz</div>
+            <div class="chip active" onclick="setSR(44100,this)">44.1 kHz</div>
+            <div class="chip" onclick="setSR(96000,this)">96 kHz</div>
+          </div>
+        </div>
+
+        <div class="ctrl-row" style="margin-top:22px;">
+          <label style="display:flex;align-items:center;justify-content:space-between;">
+            Profundidad de Bits
+            <span class="value-badge" id="bitBadge">16 bits</span>
+          </label>
+          <div class="chip-row" id="bitChips">
+            <div class="chip" onclick="setBits(8,this)">8 bits</div>
+            <div class="chip active" onclick="setBits(16,this)">16 bits</div>
+            <div class="chip" onclick="setBits(24,this)">24 bits</div>
+          </div>
+        </div>
+
+        <div class="ctrl-row" style="margin-top:22px;">
+          <label style="display:flex;align-items:center;justify-content:space-between;">
+            Ganancia de entrada
+            <span class="value-badge" id="gainBadge">1.0×</span>
+          </label>
+          <input type="range" id="gainSlider" min="0.1" max="3" step="0.05" value="1"
+            oninput="setGain(this.value)">
+          <div class="range-labels"><span>0.1×</span><span>1×</span><span>3×</span></div>
+        </div>
+
+        <!-- info rápida -->
+        <div class="stats-row">
+          <div class="stat-box">
+            <div class="stat-val" id="nyquistVal">22.05</div>
+            <div class="stat-key">Nyquist (kHz)</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="dynamicVal">96.3</div>
+            <div class="stat-key">Rango Din. (dB)</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-val" id="levelsVal">65536</div>
+            <div class="stat-key">Niveles</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- PASO 3: ESPECTRO -->
+  <div class="section">
+    <div class="step-label">
+      <div class="step-num">3</div>
+      <div class="step-title">Comparación de Espectros</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Análisis de Frecuencias</div>
+      <div class="card-sub">Comparación del espectro de frecuencias <strong>antes</strong> (grabación original) y <strong>después</strong> de la conversión con los parámetros configurados. La línea vertical marca la frecuencia de Nyquist.</div>
+      <div class="spectrum-grid">
+        <div class="spectrum-panel">
+          <h3>Original — <span>Nativo del navegador</span></h3>
+          <canvas class="spectrum-canvas" id="spectrumOrig"></canvas>
+        </div>
+        <div class="spectrum-panel">
+          <h3>Convertido — <span id="specLabel">44.1 kHz / 16 bits</span></h3>
+          <canvas class="spectrum-canvas" id="spectrumConv"></canvas>
+        </div>
+      </div>
+      <div class="log-box" id="logBox">
+        <p class="log-ok">▶ AudioLab listo. Esperando grabación...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- PASO 4: REPRODUCCIÓN Y EXPORTACIÓN -->
+  <div class="section">
+    <div class="step-label">
+      <div class="step-num">4</div>
+      <div class="step-title">Reproducción y Exportación</div>
+    </div>
+    <div class="card">
+      <div class="card-title">Resultado del Procesamiento</div>
+      <div class="card-sub">Reproducí el audio procesado y exportalo en el formato que necesitás.</div>
+
+      <div class="audio-player" id="playerSection" style="display:none;">
+        <div class="player-row">
+          <button class="play-btn" id="playBtn" onclick="togglePlay()">▶</button>
+          <div class="progress-wrap">
+            <div class="progress-bar" id="progressBar" onclick="seekAudio(event)">
+              <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <div class="time-label"><span id="currentTime">0:00</span> / <span id="totalTime">0:00</span></div>
+          </div>
+          <div class="value-badge" id="durationBadge">—</div>
+        </div>
+      </div>
+
+      <div class="export-row">
+        <button class="btn btn-primary" id="processBtn" onclick="processAudio()" disabled>
+          ⚙️ Procesar Audio
+        </button>
+        <button class="btn btn-secondary" id="exportWavBtn" onclick="exportWAV()" disabled>
+          💾 Exportar WAV
+        </button>
+        <button class="btn btn-secondary" id="exportMp3Btn" onclick="exportMP3Like()" disabled>
+          🎵 Exportar MP3
+        </button>
+        <button class="btn btn-secondary" id="clearBtn" onclick="clearAll()">
+          🗑️ Limpiar
+        </button>
+      </div>
+
+      <!-- stats del archivo -->
+      <div class="stats-row" id="fileStats" style="display:none;">
+        <div class="stat-box">
+          <div class="stat-val" id="fileSizeVal">—</div>
+          <div class="stat-key">Tamaño WAV</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="fileDurVal">—</div>
+          <div class="stat-key">Duración</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="fileSrVal">—</div>
+          <div class="stat-key">Sample Rate</div>
+        </div>
+        <div class="stat-box">
+          <div class="stat-val" id="fileBitVal">—</div>
+          <div class="stat-key">Bit Depth</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script src="script.js"></script>
+</body>
+</html>
